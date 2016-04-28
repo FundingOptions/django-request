@@ -1,7 +1,6 @@
-from django.core.urlresolvers import get_callable
-
-from request.models import Request
+# -*- coding: utf-8 -*-
 from request import settings
+from request.models import Request
 from request.router import patterns
 
 

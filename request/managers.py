@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 import datetime
 import time
 
 from django.db import models
-from django.contrib.auth.models import User
 
 try:  # For python <= 2.3
     set()
@@ -60,7 +60,7 @@ class RequestQuerySet(models.query.QuerySet):
         if not date:
             try:
                 if year and month and day:
-                    date = datetime.datetime.date(*time.strptime(year + month + day, '%Y' + month_format + day_format)[:3])
+                    date = datetime.date(*time.strptime(year + month + day, '%Y' + month_format + day_format)[:3])
                 else:
                     raise TypeError('Request.objects.day() takes exactly 3 arguments')
             except ValueError:
@@ -101,7 +101,7 @@ class RequestManager(models.Manager):
     def get_queryset(self):
         return RequestQuerySet(self.model)
 
-    get_query_set = get_queryset # Django 1.5 compat
+    get_query_set = get_queryset  # Django 1.5 compat
 
     def active_users(self, **options):
         """

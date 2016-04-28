@@ -1,48 +1,59 @@
-from datetime import timedelta, datetime
-from optparse import make_option
-from django.core.management.base import BaseCommand
+# -*- coding: utf-8 -*-
+from datetime import timedelta
+
+from dateutil.relativedelta import relativedelta
+from django.core.management.base import BaseCommand, CommandError
+from django.utils import six, timezone
 from request.models import Request
 
 DURATION_OPTIONS = {
-    'hours': lambda amount: datetime.now() - timedelta(hours=amount),
-    'days': lambda amount: datetime.now() - timedelta(days=amount),
-    'weeks': lambda amount: datetime.now() - timedelta(weeks=amount),
-    'months': lambda amount: datetime.now() - timedelta(days=(30*amount)), # 30-day month
-    'years': lambda amount: datetime.now() - timedelta(weeks=(52*amount)), # 364-day year
+    'hours': lambda amount: timezone.now() - timedelta(hours=amount),
+    'days': lambda amount: timezone.now() - timedelta(days=amount),
+    'weeks': lambda amount: timezone.now() - timedelta(weeks=amount),
+    'months': lambda amount: timezone.now() + relativedelta(months=-amount),
+    'years': lambda amount: timezone.now() + relativedelta(years=-amount),
 }
 
+input = raw_input if six.PY2 else input  # @ReservedAssignment
+
+
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option('--noinput', action='store_false', dest='interactive', default=True,
-            help='Tells Django to NOT prompt the user for input of any kind.'),
-    )
-    help = ""
-    args = '[amount duration]'
-    
-    def handle(self, amount, duration, **options):
+    help = "Purge old requests."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'amount',
+            type=int,
+        )
+        parser.add_argument('duration')
+        parser.add_argument(
+            '--noinput',
+            action='store_false',
+            dest='interactive',
+            default=True,
+            help='Tells Django to NOT prompt the user for input of any kind.'
+        )
+
+    def handle(self, *args, **options):
+        amount = options['amount']
+        duration = options['duration']
+
         # Check we have the correct values
-        try:
-            amount = int(amount)
-        except ValueError:
-            print('Amount must be a number')
-            return
-        
-        if duration[-1] != 's': # If its not plural, make it plural
-            duration_plural = '%ss' % duration
+        if duration[-1] != 's':  # If its not plural, make it plural
+            duration_plural = '{0}s'.format(duration)
         else:
             duration_plural = duration
-        
-        if not duration_plural in DURATION_OPTIONS:
-            print('Amount must be %s' % ', '.join(DURATION_OPTIONS))
-            return
-        
+
+        if duration_plural not in DURATION_OPTIONS:
+            raise CommandError('Amount must be {0}'.format(', '.join(DURATION_OPTIONS)))
+
         qs = Request.objects.filter(time__lte=DURATION_OPTIONS[duration_plural](amount))
         count = qs.count()
-        
+
         if count == 0:
-            print("There are no requests to delete.")
+            self.stdout.write('There are no requests to delete.')
             return
-        
+
         if options.get('interactive'):
             confirm = input("""
 You have requested a database reset.
@@ -54,8 +65,8 @@ Are you sure you want to do this?
 Type 'yes' to continue, or 'no' to cancel: """ % (amount, duration, count))
         else:
             confirm = 'yes'
-        
+
         if confirm == 'yes':
             qs.delete()
         else:
-            'Purge cancelled'
+            self.stdout.write('Purge cancelled')
