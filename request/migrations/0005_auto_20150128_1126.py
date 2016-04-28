@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('sessions', '0001_initial'),
-        ('request', '0001_initial'),
+        ('request', '0004_alter_time_timezone_default'),
     ]
 
     operations = [
