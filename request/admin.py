@@ -28,6 +28,10 @@ class RequestAdmin(admin.ModelAdmin):
     raw_id_fields = ('user',)
     readonly_fields = ('time',)
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('user')
+
     def lookup_allowed(self, key, value):
         return key == 'user__username' or super(RequestAdmin, self).lookup_allowed(key, value)
 

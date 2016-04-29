@@ -5,7 +5,6 @@ import json
 from socket import gethostbyaddr
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from django.db import models
 from django.utils import timezone
@@ -56,7 +55,7 @@ class Request(models.Model):
         return '[%s] %s %s %s' % (self.time, self.method, self.path, self.response)
 
     def get_user(self):
-        return get_user_model().objects.get(pk=self.user_id)
+        return self.user
 
     def from_http_request(self, request, response=None, commit=True):
         # Request infomation
@@ -78,7 +77,7 @@ class Request(models.Model):
         except Session.DoesNotExist:
             self.session = None
 
-        if getattr(request, 'user', False):
+        if request_settings.REQUEST_LOG_USER and getattr(request, 'user', False):
             if request.user.is_authenticated():
                 self.user = request.user
 

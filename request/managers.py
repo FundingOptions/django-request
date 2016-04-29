@@ -3,6 +3,7 @@ import datetime
 import time
 
 from django.db import models
+from django.utils import timezone
 
 try:  # For python <= 2.3
     set()
@@ -33,6 +34,9 @@ class RequestQuerySet(models.query.QuerySet):
         else:
             last_day = first_day.replace(month=first_day.month + 1)
 
+        first_day = timezone.make_aware(datetime.datetime.combine(first_day, datetime.time.min))
+        last_day = timezone.make_aware(datetime.datetime.combine(last_day, datetime.time.max))
+
         lookup_kwargs = {
             'time__gte': first_day,
             'time__lt': last_day,
@@ -49,6 +53,10 @@ class RequestQuerySet(models.query.QuerySet):
         # Calculate first and last day of week, for use in a date-range lookup.
         first_day = date
         last_day = date + datetime.timedelta(days=7)
+
+        first_day = timezone.make_aware(datetime.datetime.combine(first_day, datetime.time.min))
+        last_day = timezone.make_aware(datetime.datetime.combine(last_day, datetime.time.max))
+
         lookup_kwargs = {
             'time__gte': first_day,
             'time__lt': last_day,
@@ -66,19 +74,22 @@ class RequestQuerySet(models.query.QuerySet):
             except ValueError:
                 return
 
-        return self.filter(time__range=(datetime.datetime.combine(date, datetime.time.min), datetime.datetime.combine(date, datetime.time.max)))
+        return self.filter(time__range=(
+            timezone.make_aware(datetime.datetime.combine(date, datetime.time.min)),
+            timezone.make_aware(datetime.datetime.combine(date, datetime.time.max))
+        ))
 
     def today(self):
-        return self.day(date=datetime.date.today())
+        return self.day(date=timezone.now().date())
 
     def this_year(self):
-        return self.year(datetime.datetime.now().year)
+        return self.year(timezone.now().year)
 
     def this_month(self):
-        return self.month(date=datetime.date.today())
+        return self.month(date=timezone.now().date())
 
     def this_week(self):
-        today = datetime.date.today()
+        today = timezone.now().date()
         return self.week(str(today.year), str(today.isocalendar()[1] - 1))
 
     def unique_visits(self):
@@ -118,7 +129,7 @@ class RequestManager(models.Manager):
         qs = self.filter(user__isnull=False)
 
         if options:
-            time = datetime.datetime.now() - datetime.timedelta(**options)
+            time = timezone.now() - datetime.timedelta(**options)
             qs = qs.filter(time__gte=time)
 
         requests = qs.select_related('user').only('user')
