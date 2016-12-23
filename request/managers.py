@@ -4,11 +4,6 @@ import time
 from django.db import models
 from django.contrib.auth.models import User
 
-try:  # For python <= 2.3
-    set()
-except NameError:
-    from sets import Set as set
-
 QUERYSET_PROXY_METHODS = ('year', 'month', 'week', 'day', 'today', 'this_week', 'this_month', 'this_year', 'unique_visits', 'attr_list', 'search')
 
 
