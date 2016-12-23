@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 
 from django.utils.translation import ugettext_lazy as _
 from django.shortcuts import render_to_response
