@@ -1,19 +1,23 @@
+# -*- coding: utf-8 -*-
 import re
 
 from django.db.models import Count
-from django.utils.translation import string_concat, ugettext, ugettext_lazy as _
 from django.template.loader import render_to_string
 
-from request import settings
-from request.models import Request
-from request.traffic import modules
+from . import settings
+from .models import Request
+from .traffic import modules
 
-# Calculate the verbose_name by converting from InitialCaps to "lowercase with spaces".
-get_verbose_name = lambda class_name: re.sub('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))', ' \\1', class_name).strip()
+
+def get_verbose_name(class_name):
+    '''
+    Calculate the verbose_name by converting from InitialCaps to "lowercase with spaces".
+    '''
+    return re.sub('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))', ' \\1', class_name).strip()
 
 
 def set_count(items):
-    """
+    '''
     This is similar to "set", but this just creates a list with values.
     The list will be ordered from most frequent down.
 
@@ -21,7 +25,7 @@ def set_count(items):
         >>> inventory = ['apple', 'lemon', 'apple', 'orange', 'lemon', 'lemon']
         >>> set_count(inventory)
         [('lemon', 3), ('apple', 2), ('orange', 1)]
-    """
+    '''
     item_count = {}
     for item in items:
         if not item:
@@ -39,26 +43,29 @@ def set_count(items):
 
 class Plugins(object):
     def load(self):
-        from django.utils.importlib import import_module
+        from importlib import import_module
         from django.core import exceptions
 
         self._plugins = []
-        for module_path in settings.REQUEST_PLUGINS:
+        for module_path in settings.PLUGINS:
             try:
                 dot = module_path.rindex('.')
             except ValueError:
-                raise exceptions.ImproperlyConfigured('%s isn\'t a plugin' % module_path)
+                raise exceptions.ImproperlyConfigured('{0} isn\'t a plugin'.format(module_path))
             plugin, plugin_classname = module_path[:dot], module_path[dot + 1:]
 
             try:
                 mod = import_module(plugin)
             except ImportError as e:
-                raise exceptions.ImproperlyConfigured('Error importing plugin %s: "%s"' % (plugin, e))
+                raise exceptions.ImproperlyConfigured('Error importing plugin {0}: "{1}"'.format(plugin, e))
 
             try:
                 plugin_class = getattr(mod, plugin_classname)
             except AttributeError:
-                raise exceptions.ImproperlyConfigured('Plugin "%s" does not define a "%s" class' % (plugin, plugin_classname))
+                raise exceptions.ImproperlyConfigured('Plugin "{0}" does not define a "{1}" class'.format(
+                    plugin,
+                    plugin_classname,
+                ))
 
             self._plugins.append(plugin_class())
 
@@ -68,6 +75,7 @@ class Plugins(object):
         return self._plugins
     plugins = property(plugins)
 
+
 plugins = Plugins()
 
 
@@ -76,15 +84,15 @@ class Plugin(object):
         self.module_name = self.__class__.__name__
 
         if not hasattr(self, 'verbose_name'):
-            self.verbose_name = _(get_verbose_name(self.module_name))
+            self.verbose_name = get_verbose_name(self.module_name)
 
     def template_context(self):
-        {}
+        return {}
 
     def render(self):
         templates = [
-            "request/plugins/%s.html" % (self.__class__.__name__.lower()),
-            "request/plugins/base.html",
+            'request/plugins/{0}.html'.format(self.__class__.__name__.lower()),
+            'request/plugins/base.html',
         ]
 
         if hasattr(self, 'template'):

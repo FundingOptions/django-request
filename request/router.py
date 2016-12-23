@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 import re
+
+from django.utils.six import string_types
 
 
 class RegexPattern(object):
@@ -18,7 +21,7 @@ class patterns(object):
         self.unknown = unknown
 
         for pattern in args:
-            if pattern.__class__ == str:
+            if isinstance(pattern, string_types):
                 self.patterns.append(RegexPattern(pattern))
             else:
                 self.patterns.append(RegexPattern(*pattern))

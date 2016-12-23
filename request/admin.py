@@ -1,16 +1,16 @@
+# -*- coding: utf-8 -*-
 import json
-from datetime import timedelta, date
-
-from django.utils.translation import ugettext_lazy as _
-from django.shortcuts import render_to_response
+from datetime import date, timedelta
 from functools import update_wrapper
-from django.template import RequestContext
+
 from django.contrib import admin
 from django.http import HttpResponse
+from django.shortcuts import render
+from django.utils.translation import ugettext_lazy as _
 
-from request.models import Request
-from request.traffic import modules
-from request.plugins import *
+from .models import Request
+from .plugins import plugins
+from .traffic import modules
 
 
 class RequestAdmin(admin.ModelAdmin):
@@ -35,8 +35,15 @@ class RequestAdmin(admin.ModelAdmin):
     def request_from(self, obj):
         if obj.user_id:
             user = obj.get_user()
-            return '<a href="?user__username=%s" title="%s">%s</a>' % (user.username, _('Show only requests from this user.'), user)
-        return '<a href="?ip=%s" title="%s">%s</a>' % (obj.ip, _('Show only requests from this IP address.'), obj.ip)
+            return '<a href="?user__username={0}" title="{1}">{2}</a>'.format(
+                user.username,
+                _('Show only requests from this user.'),
+                user,
+            )
+        return '<a href="?ip={0}" title="{1}">{0}</a>'.format(
+            obj.ip,
+            _('Show only requests from this IP address.'),
+        )
     request_from.short_description = 'From'
     request_from.allow_tags = True
 
@@ -54,10 +61,9 @@ class RequestAdmin(admin.ModelAdmin):
             info += (self.model._meta.model_name,)
         except AttributeError:
             info += (self.model._meta.module_name,)
-        
         return [
-            url(r'^overview/$', wrap(self.overview), name='%s_%s_overview' % info),
-            url(r'^overview/traffic.json$', wrap(self.traffic), name='%s_%s_traffic' % info),
+            url(r'^overview/$', wrap(self.overview), name='{0}_{1}_overview'.format(*info)),
+            url(r'^overview/traffic/$', wrap(self.traffic), name='{0}_{1}_traffic'.format(*info)),
         ] + super(RequestAdmin, self).get_urls()
 
     def overview(self, request):
@@ -65,10 +71,14 @@ class RequestAdmin(admin.ModelAdmin):
         for plugin in plugins.plugins:
             plugin.qs = qs
 
-        return render_to_response('admin/request/request/overview.html', {
-            'title': _('Request overview'),
-            'plugins': plugins.plugins,
-        }, context_instance=RequestContext(request))
+        return render(
+            request,
+            'admin/request/request/overview.html',
+            {
+                'title': _('Request overview'),
+                'plugins': plugins.plugins,
+            }
+        )
 
     def traffic(self, request):
         try:
@@ -86,5 +96,6 @@ class RequestAdmin(admin.ModelAdmin):
         days = [date.today() - timedelta(day) for day in range(0, days_count, days_step)]
         days_qs = [(day, Request.objects.day(date=day)) for day in days]
         return HttpResponse(json.dumps(modules.graph(days_qs)), content_type='text/javascript')
+
 
 admin.site.register(Request, RequestAdmin)

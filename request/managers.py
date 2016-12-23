@@ -1,10 +1,25 @@
+# -*- coding: utf-8 -*-
 import datetime
 import time
 
 from django.db import models
-from django.contrib.auth.models import User
+from django.db.models import Q
 
-QUERYSET_PROXY_METHODS = ('year', 'month', 'week', 'day', 'today', 'this_week', 'this_month', 'this_year', 'unique_visits', 'attr_list', 'search')
+from . import settings
+
+QUERYSET_PROXY_METHODS = (
+    'year',
+    'month',
+    'week',
+    'day',
+    'today',
+    'this_week',
+    'this_month',
+    'this_year',
+    'unique_visits',
+    'attr_list',
+    'search',
+)
 
 
 class RequestQuerySet(models.query.QuerySet):
@@ -55,13 +70,16 @@ class RequestQuerySet(models.query.QuerySet):
         if not date:
             try:
                 if year and month and day:
-                    date = datetime.datetime.date(*time.strptime(year + month + day, '%Y' + month_format + day_format)[:3])
+                    date = datetime.date(*time.strptime(year + month + day, '%Y' + month_format + day_format)[:3])
                 else:
                     raise TypeError('Request.objects.day() takes exactly 3 arguments')
             except ValueError:
                 return
 
-        return self.filter(time__range=(datetime.datetime.combine(date, datetime.time.min), datetime.datetime.combine(date, datetime.time.max)))
+        return self.filter(time__range=(
+            datetime.datetime.combine(date, datetime.time.min),
+            datetime.datetime.combine(date, datetime.time.max),
+        ))
 
     def today(self):
         return self.day(date=datetime.date.today())
@@ -74,17 +92,16 @@ class RequestQuerySet(models.query.QuerySet):
 
     def this_week(self):
         today = datetime.date.today()
-        return self.week(str(today.year), str(today.isocalendar()[1] - 1))
+        return self.week(str(today.year), today.strftime('%U'))
 
     def unique_visits(self):
-        from request import settings
-        return self.exclude(referer__startswith=settings.REQUEST_BASE_URL)
+        return self.exclude(referer__startswith=settings.BASE_URL)
 
     def attr_list(self, name):
         return [getattr(item, name, None) for item in self if hasattr(item, name)]
 
     def search(self):
-        return self.filter(referer__contains='google') | self.filter(referer__contains='yahoo') | self.filter(referer__contains='bing')
+        return self.filter(Q(referer__contains='google') | Q(referer__contains='yahoo') | Q(referer__contains='bing'))
 
 
 class RequestManager(models.Manager):
@@ -96,10 +113,10 @@ class RequestManager(models.Manager):
     def get_queryset(self):
         return RequestQuerySet(self.model)
 
-    get_query_set = get_queryset # Django 1.5 compat
+    get_query_set = get_queryset  # Django 1.5 compat
 
     def active_users(self, **options):
-        """
+        '''
         Returns a list of active users.
 
         Any arguments passed to this method will be
@@ -108,7 +125,7 @@ class RequestManager(models.Manager):
         Example:
         >>> Request.object.active_users(minutes=15)
         [<User: kylef>, <User: krisje8>]
-        """
+        '''
 
         qs = self.filter(user__isnull=False)
 
