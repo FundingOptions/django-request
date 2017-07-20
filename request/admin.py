@@ -29,14 +29,18 @@ class RequestAdmin(admin.ModelAdmin):
     raw_id_fields = ('user',)
     readonly_fields = ('time',)
 
+    def get_queryset(self, request):
+        qs = super(RequestAdmin, self).get_queryset(request)
+        return qs.select_related('user', 'session')
+
     def lookup_allowed(self, key, value):
         return key == 'user__username' or super(RequestAdmin, self).lookup_allowed(key, value)
 
     def request_from(self, obj):
         if obj.user_id:
             user = obj.get_user()
-            return '<a href="?user__username={0}" title="{1}">{2}</a>'.format(
-                user.username,
+            return '<a href="?user={0}" title="{1}">{2}</a>'.format(
+                user.pk,
                 _('Show only requests from this user.'),
                 user,
             )
