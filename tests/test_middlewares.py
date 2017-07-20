@@ -4,9 +4,10 @@ from unittest import skipIf
 import django
 import mock
 from django.http import HttpResponse
-from django.test import RequestFactory, TestCase
+from django.test import TestCase
 from request.middleware import RequestMiddleware
 from request.models import Request
+from tests.utils import SessionRequestFactory
 
 try:
     from django.contrib.auth import get_user_model
@@ -18,7 +19,7 @@ except ImportError:
 
 class RequestMiddlewareTest(TestCase):
     def setUp(self):
-        self.factory = RequestFactory()
+        self.factory = SessionRequestFactory()
         self.middleware = RequestMiddleware()
 
     def test_record(self):

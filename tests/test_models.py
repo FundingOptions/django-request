@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 import socket
 from datetime import datetime
+from importlib import import_module
 
 import mock
 from django.http import HttpRequest, HttpResponse
 from django.test import TestCase
 from request import settings
 from request.models import Request
+from tests.utils import SessionRequestFactory
 
 try:
     from django.contrib.auth import get_user_model
@@ -16,14 +18,25 @@ except ImportError:
     from django.contrib.auth.models import User
 
 
+def _attach_session(request):
+    from django.conf import settings
+    engine = import_module(settings.SESSION_ENGINE)
+    request.session = engine.SessionStore(None)
+
+
 class RequestTests(TestCase):
+
+    def setUp(self):
+        super(RequestTests, self).setUp()
+        self.factory = SessionRequestFactory()
+
     def test_from_http_request(self):
-        http_request = HttpRequest()
-        http_request.method = 'PATCH'
-        http_request.path = '/kylef'
-        http_request.META['REMOTE_ADDR'] = '32.64.128.16'
-        http_request.META['HTTP_USER_AGENT'] = 'test user agent'
-        http_request.META['HTTP_REFERER'] = 'https://fuller.li/'
+        http_request = self.factory.patch(
+            '/kylef',
+            REMOTE_ADDR='32.64.128.16',
+            HTTP_USER_AGENT='test user agent',
+            HTTP_REFERER='https://fuller.li/',
+        )
 
         http_response = HttpResponse(status=204)
 
@@ -38,8 +51,7 @@ class RequestTests(TestCase):
         self.assertEqual(request.referer, 'https://fuller.li/')
 
     def test_from_http_request_with_user(self):
-        http_request = HttpRequest()
-        http_request.method = 'GET'
+        http_request = self.factory.get('/')
         http_request.user = User.objects.create(username='foo')
 
         request = Request()
@@ -47,8 +59,8 @@ class RequestTests(TestCase):
         self.assertEqual(request.user.id, http_request.user.id)
 
     def test_from_http_request_redirection(self):
-        http_request = HttpRequest()
-        http_request.method = 'GET'
+        http_request = self.factory.get('/')
+
         http_response = HttpResponse(status=301)
         http_response['Location'] = '/foo'
 
@@ -57,8 +69,7 @@ class RequestTests(TestCase):
         self.assertEqual(request.redirect, '/foo')
 
     def test_from_http_request_not_commit(self):
-        http_request = HttpRequest()
-        http_request.method = 'GET'
+        http_request = self.factory.get('/')
 
         request = Request()
         request.from_http_request(http_request, commit=False)
