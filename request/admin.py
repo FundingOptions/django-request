@@ -35,17 +35,13 @@ class RequestAdmin(admin.ModelAdmin):
         qs = super(RequestAdmin, self).get_queryset(request)
         return qs.select_related('user', 'session')
 
-    def lookup_allowed(self, key, value):
-        return key == 'user__username' or super(RequestAdmin, self).lookup_allowed(key, value)
-
     def request_from(self, obj):
         if obj.user_id:
-            user = obj.get_user()
             return format_html(
                 '<a href="?user={0}" title="{1}">{2}</a>',
-                user.pk,
+                obj.user_id,
                 _('Show only requests from this user.'),
-                user,
+                obj.user,
             )
         return format_html(
             '<a href="?ip={0}" title="{1}">{0}</a>',
