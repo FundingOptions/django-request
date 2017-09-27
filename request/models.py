@@ -50,7 +50,7 @@ class Request(models.Model):
     user_agent = models.CharField(_('user agent'), max_length=255, blank=True, null=True)
     language = models.CharField(_('language'), max_length=255, blank=True, null=True)
     post_data = models.TextField(blank=True, null=True)
-    session = models.ForeignKey(Session, blank=True, null=True)
+    session = models.ForeignKey(Session, blank=True, null=True, on_delete=models.CASCADE)
     objects = RequestManager()
 
     class Meta:
