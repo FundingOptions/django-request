@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 import json
 
+import django
 from django.contrib.admin import site
+from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase
+from django.test.utils import override_settings
+from django.utils.translation import _trans
 from request.admin import RequestAdmin
 from request.models import Request
 
-try:
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-except ImportError:
-    # to keep backward (Django <= 1.4) compatibility
-    from django.contrib.auth.models import User
 
 try:
     from django.urls import reverse
@@ -30,7 +28,7 @@ class LookupAllowedTest(TestCase):
 class RequestFromTest(TestCase):
     def test_user_id(self):
         admin = RequestAdmin(Request, site)
-        user = User.objects.create(username='foo')
+        user = get_user_model().objects.create(username='foo')
         request = Request.objects.create(user=user, ip='1.2.3.4')
         admin.request_from(request)
 
@@ -63,22 +61,30 @@ class TrafficTest(TestCase):
         request = self.factory.get('/foo')
         self.admin.traffic(request)
 
+    @override_settings(USE_I18N=False)
+    def test_traffic_without_i18n(self):
+        if django.VERSION >= (2, 0):
+            del _trans.gettext
+        else:
+            del _trans.ugettext
+        request = self.factory.get('/foo')
+        self.admin.traffic(request)
+
     def test_bad_days(self):
         request = self.factory.get('/foo', {'days': 'foo'})
         self.admin.traffic(request)
 
-    def test_days_lt_10(self):
-        request = self.factory.get('/foo', {'days': 9})
-        self.admin.traffic(request)
-
-    def test_days_gt_60(self):
-        request = self.factory.get('/foo', {'days': 61})
-        self.admin.traffic(request)
+    def test_days(self):
+        for days, intervals in ((9, 10), (30, 16), (365, 13)):
+            request = self.factory.get('/foo', {'days': days})
+            data = json.loads(self.admin.traffic(request).content.decode())
+            for single_data in data:
+                self.assertEqual(len(single_data['data']), intervals)
 
 
 class RequestAdminViewsTest(TestCase):
     def setUp(self):
-        user = User(username='foo', is_superuser=True, is_staff=True)
+        user = get_user_model()(username='foo', is_superuser=True, is_staff=True)
         user.set_password('bar')
         user.save()
         self.client.login(username=user.username, password='bar')
