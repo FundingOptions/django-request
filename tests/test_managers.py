@@ -1,28 +1,19 @@
 # -*- coding: utf-8 -*-
 from datetime import date, timedelta
 
-from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.test import TestCase, override_settings
 from django.utils.timezone import now
+
 from request import settings
 from request.managers import QUERYSET_PROXY_METHODS, RequestQuerySet
 from request.models import Request
 
-try:
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-except ImportError:
-    # to keep backward (Django <= 1.4) compatibility
-    from django.contrib.auth.models import User
-
 
 class RequestManagerTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username='foo')
-        self.user_2 = User.objects.create(username='bar')
-
-    def tearDown(self):
-        self.user.delete()
-        self.user_2.delete()
+        self.user = get_user_model().objects.create(username='foo')
+        self.user_2 = get_user_model().objects.create(username='bar')
 
     def test_getattr(self):
         for meth in QUERYSET_PROXY_METHODS:
@@ -42,19 +33,32 @@ class RequestManagerTest(TestCase):
         self.assertEqual(len(users), 1)
 
     def test_active_users_with_options(self):
-        yesterday = now() - timedelta(days=1)
         request = Request.objects.create(user=self.user, ip='1.2.3.4')
-        request.time = yesterday
+        request.time = now() - timedelta(days=1)
         request.save()
-        # Test
         options = {'minutes': 1, 'hours': 1}
         users = Request.objects.active_users(**options)
         self.assertEqual(len(users), 0)
+        options = {'hours': 1, 'days': 1}
+        users = Request.objects.active_users(**options)
+        self.assertEqual(len(users), 1)
+
+    @override_settings(USE_TZ=True, TIME_ZONE='Africa/Nairobi')
+    def test_active_users_with_options_and_tz(self):
+        request = Request.objects.create(user=self.user, ip='1.2.3.4')
+        request.time = now() - timedelta(hours=1)
+        request.save()
+        options = {'minutes': 50, 'seconds': 20}
+        users = Request.objects.active_users(**options)
+        self.assertEqual(len(users), 0)
+        options = {'minutes': 1, 'hours': 1}
+        users = Request.objects.active_users(**options)
+        self.assertEqual(len(users), 1)
 
 
 class RequestQuerySetTest(TestCase):
     def setUp(self):
-        user = User.objects.create(username='foo')
+        user = get_user_model().objects.create(username='foo')
         self.request = Request.objects.create(user=user, ip='1.2.3.4')
 
     def test_year(self):
@@ -65,6 +69,8 @@ class RequestQuerySetTest(TestCase):
 
     def test_month(self):
         qs = Request.objects.all().month(year=None, month=None, date=now())
+        self.assertEqual(qs.count(), 1)
+        qs = Request.objects.all().month(year=None, month=None, date=date.today())
         self.assertEqual(qs.count(), 1)
         qs = Request.objects.all().month(
             year=None,

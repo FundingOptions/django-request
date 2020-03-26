@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from django.test import TestCase
+
 from request import router
 
 
@@ -25,12 +26,12 @@ class RegexPatternTest(TestCase):
         self.assertIsNone(pat.resolve('bar'))
 
 
-class patternsTest(TestCase):
+class PatternsTest(TestCase):
     def setUp(self):
         self.unkn_pat = r'^foobar$'
         self.pat1 = r'^foo$'
         self.pat2 = r'^bar$'
-        self.pats = router.patterns(self.unkn_pat, self.pat1, self.pat2)
+        self.pats = router.Patterns(self.unkn_pat, self.pat1, self.pat2)
 
     def test_resolve(self):
         pat = self.pats.resolve('foo')

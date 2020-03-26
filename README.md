@@ -3,8 +3,7 @@ django-request
 
 [![Build Status](http://img.shields.io/travis/django-request/django-request/master.svg?style=flat)](https://travis-ci.org/django-request/django-request)
 [![Coverage Status](https://coveralls.io/repos/github/django-request/django-request/badge.svg?branch=master)](https://coveralls.io/github/django-request/django-request?branch=master)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/django-request.svg)](https://pypi.python.org/pypi/django-request)
-[![PyPI Version](https://img.shields.io/pypi/v/django-request.svg)](https://pypi.python.org/pypi/django-request)
+[![PyPI Version](https://img.shields.io/pypi/v/django-request.svg)](https://pypi.org/project/django-request/)
 
 django-request is a statistics module for django. It stores requests in a database for admins to see, it can also be used to get statistics on who is online etc.
 
@@ -15,6 +14,18 @@ As well as a site statistics module, with the `active_users` template tag and ma
     Request.objects.active_users(minutes=15)
 
 To find the request overview page, please click on Requests inside the admin, then “Overview” on the top right, next to “add request”.
+
+Requirements
+------------
+
+* **Python**: 2.7, 3.4, 3.6, 3.7
+* **Django**: 1.10, 1.11, 2.0, 2.1, 2.2, 3.0
+* **python-dateutil**
+* **six**
+
+django-request [1.5.1](https://pypi.org/project/django-request/1.5.1/) is the last version that supports Django 1.4, 1.5, 1.6.
+django-request [1.5.4](https://pypi.org/project/django-request/1.5.4/) is the
+last version that supports Django 1.7, 1.8, 1.9.
 
 Installation
 ------------

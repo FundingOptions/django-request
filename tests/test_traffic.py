@@ -2,6 +2,7 @@
 import mock
 from django.core import exceptions
 from django.test import TestCase
+
 from request import traffic
 from request.models import Request
 
@@ -38,11 +39,11 @@ class ModulesModulesTest(TestCase):
     def test_loaded(self):
         self.modules.load()
         modules = self.modules.modules
-        self.assertIsInstance(modules, list)
+        self.assertIsInstance(modules, tuple)
 
     def test_unloaded(self):
         modules = self.modules.modules
-        self.assertIsInstance(modules, list)
+        self.assertIsInstance(modules, tuple)
 
 
 class ModulesTableTest(TestCase):
@@ -52,7 +53,7 @@ class ModulesTableTest(TestCase):
     def test_table(self):
         queries = Request.objects.all()
         table = self.modules.table(queries)
-        self.assertIsInstance(table, list)
+        self.assertIsInstance(table, tuple)
 
 
 class ModulesGraphTest(TestCase):
@@ -62,12 +63,16 @@ class ModulesGraphTest(TestCase):
     def test_graph(self):
         queries = Request.objects.all()
         table = self.modules.graph(queries)
-        self.assertIsInstance(table, list)
+        self.assertIsInstance(table, tuple)
 
 
 class ModuleBaseTest(TestCase):
     def test_init(self):
         traffic.Module()
+
+    def test_verbose_name_plural(self):
+        module = traffic.Module()
+        self.assertEqual(module.verbose_name_plural, 'Modules')
 
 
 class ModuleAjaxTest(TestCase):

@@ -4,6 +4,7 @@ import time
 
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from . import settings
 
@@ -35,20 +36,10 @@ class RequestQuerySet(models.query.QuerySet):
                     raise TypeError('Request.objects.month() takes exactly 2 arguments')
             except ValueError:
                 return
-
-        # Calculate first and last day of month, for use in a date-range lookup.
-        first_day = date.replace(day=1)
-        if first_day.month == 12:
-            last_day = first_day.replace(year=first_day.year + 1, month=1)
-        else:
-            last_day = first_day.replace(month=first_day.month + 1)
-
-        lookup_kwargs = {
-            'time__gte': first_day,
-            'time__lt': last_day,
-        }
-
-        return self.filter(**lookup_kwargs)
+        # Truncate to date.
+        if isinstance(date, datetime.datetime):
+            date = date.date()
+        return self.filter(time__year=date.year, time__month=date.month)
 
     def week(self, year, week):
         try:
@@ -75,17 +66,13 @@ class RequestQuerySet(models.query.QuerySet):
                     raise TypeError('Request.objects.day() takes exactly 3 arguments')
             except ValueError:
                 return
-
-        return self.filter(time__range=(
-            datetime.datetime.combine(date, datetime.time.min),
-            datetime.datetime.combine(date, datetime.time.max),
-        ))
+        return self.filter(time__date=date)
 
     def today(self):
         return self.day(date=datetime.date.today())
 
     def this_year(self):
-        return self.year(datetime.datetime.now().year)
+        return self.year(datetime.date.today().year)
 
     def this_month(self):
         return self.month(date=datetime.date.today())
@@ -113,8 +100,6 @@ class RequestManager(models.Manager):
     def get_queryset(self):
         return RequestQuerySet(self.model)
 
-    get_query_set = get_queryset  # Django 1.5 compat
-
     def active_users(self, **options):
         '''
         Returns a list of active users.
@@ -130,7 +115,7 @@ class RequestManager(models.Manager):
         qs = self.filter(user__isnull=False)
 
         if options:
-            time = datetime.datetime.now() - datetime.timedelta(**options)
+            time = timezone.now() - datetime.timedelta(**options)
             qs = qs.filter(time__gte=time)
 
         requests = qs.select_related('user').only('user')

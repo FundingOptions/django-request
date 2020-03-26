@@ -3,11 +3,12 @@ import json
 from datetime import date, timedelta
 from functools import update_wrapper
 
+from django.conf.urls import url
 from django.contrib import admin
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils.html import format_html
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from .models import Request
 from .plugins import plugins
@@ -34,17 +35,13 @@ class RequestAdmin(admin.ModelAdmin):
         qs = super(RequestAdmin, self).get_queryset(request)
         return qs.select_related('user', 'session')
 
-    def lookup_allowed(self, key, value):
-        return key == 'user__username' or super(RequestAdmin, self).lookup_allowed(key, value)
-
     def request_from(self, obj):
         if obj.user_id:
-            user = obj.get_user()
             return format_html(
                 '<a href="?user={0}" title="{1}">{2}</a>',
-                user.pk,
+                obj.user_id,
                 _('Show only requests from this user.'),
-                user,
+                obj.user,
             )
         return format_html(
             '<a href="?ip={0}" title="{1}">{0}</a>',
@@ -55,19 +52,12 @@ class RequestAdmin(admin.ModelAdmin):
     request_from.allow_tags = True
 
     def get_urls(self):
-        from django.conf.urls import url
-
         def wrap(view):
             def wrapper(*args, **kwargs):
                 return self.admin_site.admin_view(view)(*args, **kwargs)
             return update_wrapper(wrapper, view)
 
-        # to keep backward (Django <= 1.7) compatibility
-        info = (self.model._meta.app_label,)
-        try:
-            info += (self.model._meta.model_name,)
-        except AttributeError:
-            info += (self.model._meta.module_name,)
+        info = (self.model._meta.app_label, self.model._meta.model_name)
         return [
             url(r'^overview/$', wrap(self.overview), name='{0}_{1}_overview'.format(*info)),
             url(r'^overview/traffic/$', wrap(self.traffic), name='{0}_{1}_traffic'.format(*info)),
@@ -100,7 +90,7 @@ class RequestAdmin(admin.ModelAdmin):
         else:
             days_step = 30
 
-        days = [date.today() - timedelta(day) for day in range(0, days_count, days_step)]
+        days = [date.today() - timedelta(day) for day in range(0, days_count + 1, days_step)]
         days_qs = [(day, Request.objects.day(date=day)) for day in days]
         return HttpResponse(json.dumps(modules.graph(days_qs)), content_type='text/javascript')
 
