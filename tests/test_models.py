@@ -7,6 +7,7 @@ import mock
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.test import TestCase
+
 from request import settings
 from request.models import Request
 from tests.utils import SessionRequestFactory
